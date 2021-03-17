@@ -42,7 +42,7 @@ if (isset($_POST['submit'])) {
 
             <label for="username">Username</label>
             <input id="username" type="text" name="username" value="<?php echo $user_info['user_name']; ?>"><br><br>
-
+            <!--change the type for password to password when done debugging-->
             <label for="password">Password</label>
             <input id="password" type="text" name="password" value="<?php echo $user_info['user_pass']; ?>"><br><br>
 
