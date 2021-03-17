@@ -1,6 +1,7 @@
 <?php
 require_once '../load.php';
 $ip = $_SERVER['REMOTE_ADDR'];
+// var_dump(createEncryptedPassword('admin'));
 
 if (isset($_SESSION['user_id'])) {
     redirect_to("index.php");

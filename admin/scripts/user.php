@@ -158,33 +158,46 @@ function deleteUser($user_id){
 
 function editUser($user_data)
 {
-    if (empty($user_data['username']) || isUsernameExists($user_data['username'])) {
-        return 'Username is invalid!!';
+    // if(empty($user_data['username']) || isUsernameExists($user_data['username'])){
+    //     return 'Username is Invalid or Already Exists';
+    // }
+
+    $pdo = Database::getInstance()->getConnection(); 
+
+
+     ##Store the new password
+    $updated_password = $user_data["password"];
+    
+    ##ENCRYPT THE UPDATED PASSWORD HERE
+    $encrypted_password_update = createEncryptedPassword($updated_password);
+    // Boolean to check we have a blank password
+    $is_new_password = $updated_password !== '';
+
+    $password_sql_snippet = $is_new_password ? ', user_pass=:password ' : '';
+    $update_user_query = 
+        'UPDATE tbl_user SET user_fname=:fname, user_name=:username, user_email=:email, user_level=:user_level '. $password_sql_snippet .'WHERE user_id = :id';
+    // var_dump($update_user_query); die;
+    $update_user_set = $pdo->prepare($update_user_query);
+    $placeholders = array(
+        ":fname"    =>$user_data["fname"],
+        ":username" =>$user_data["username"],
+        ":email"    =>$user_data["email"],
+        ":user_level"=>$user_data["user_level"],
+        ":id"=>$user_data["id"]
+    );
+
+    if($is_new_password) {
+        $placeholders[":password"] = $encrypted_password_update;
     }
 
-    $pdo = Database::getInstance()->getConnection();
+    $update_user_result = $update_user_set->execute($placeholders);
 
-    ## TODO: finish the following lines, so that your user profile is updated
-    $update_user_query  = 'UPDATE tbl_user SET user_fname = :fname, user_name=:username, user_pass=:password, user_email=:email, user_level=:level WHERE user_id=:id';
-    $update_user_set    = $pdo->prepare($update_user_query);
-    $update_user_result = $update_user_set->execute(
-        array(
-            ':fname'    => $user_data['fname'],
-            ':username' => $user_data['username'],
-            ':password' => $user_data['password'],
-            ':email'    => $user_data['email'],
-            ':level'    => $user_data['user_level'],
-            ':id'       => $user_data['id'],
-        )
-    );
-    // $update_user_set->debugDumpParams();
-    // exit;
-
-    if ($update_user_result) {
+    if($update_user_result){
+        $_SESSION['user_name'] = $user_data['fname'];
         $_SESSION['user_level'] = $user_data['user_level'];
         redirect_to('index.php');
-    } else {
-        return 'Guess you got canned....';
+    }else{
+        return 'Update did not go through.';
     }
 }
 
