@@ -20,38 +20,90 @@ function getCurrentUserLevel()
     }
 }
 
-function createUser($user_data)
-{
 
-    if (empty($user_data['username']) || isUsernameExists($user_data['username'])) {
-        return 'Username is invalid!!';
+function createUser($user_data){
+
+    if(empty($user_data['username']) || isUsernameExists($user_data['username'])){
+        return 'Username is Invalid or Already Exists';
     }
+    ##RANDOMLY GENERATE A PASSWORD HERE
+    $random_password = createRandomPassword(); 
 
-    ## 1. Run the proper SQL query to insert user
+    ##ENCRYPT THE RANDOM PASSWORD HERE
+    $encrypted_password = createEncryptedPassword($random_password);   
+
+    ##1. Run the proper SQL query to insert user
     $pdo = Database::getInstance()->getConnection();
-
+    ##EDIT HERE SO THAT THE INPUT PASSWORD ISNT THERE- Save the new encrypted password here (add to db)
     $create_user_query = 'INSERT INTO tbl_user(user_fname, user_name, user_pass, user_email, user_level)';
-    $create_user_query .= ' VALUES(:fname, :username, :password, :email, :user_level)';
+    $create_user_query .= 'VALUES(:fname,:username,:password,:email, :user_level)';
 
-    $create_user_set    = $pdo->prepare($create_user_query);
+ 
+    $create_user_set = $pdo->prepare($create_user_query);
     $create_user_result = $create_user_set->execute(
         array(
-            ':fname'      => $user_data['fname'],
-            ':username'   => $user_data['username'],
-            ':password'   => $user_data['password'],
-            ':email'      => $user_data['email'],
-            ':user_level' => $user_data['user_level'],
+            ":fname"=>$user_data["fname"],
+            ":username"=>$user_data["username"],
+            ":password"=>$encrypted_password,
+            ":email"=>$user_data["email"],
+            ":user_level"=>$user_data["user_level"]
         )
     );
 
-    ## 2. Redirect to index.php if create user successfully (*maybe with some message???),
-    # otherwise, showing the error message
+    ##2. Redirect to index.php if we created user successfully, maybe with some message?,
+    ##   otherwise show the error message
 
-    if ($create_user_result) {
+    if($create_user_result){
+        ##EMAIL USER THEIR CREDENTIALS
+        ##pass in the user info we grabbed before these lines
+        ##here will use the plain text password
+        sendRegistrationEmail($user_data["username"],$random_password,$user_data["email"]);
+        ##THIS IS FOR TESTING PURPOSES BECAUSE I DON'T HAVE A LIVE SERVER TO TEST THE EMAIL ON
+        var_dump($random_password);
+        die;
         redirect_to('index.php');
-    } else {
+    }else{
         return 'The user did not go through!!';
     }
+}
+
+
+##function to create random password goes here 
+function createRandomPassword(){
+    //these are the character options
+    $characterOptions = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
+    $rand_password = array();
+    //account for index lengths
+    $optionsLength = strlen($characterOptions) - 1;
+    //loop over and choose a random character
+    for ($i = 0; $i < 7; $i++) {
+        $number = rand(0, $optionsLength);
+        $rand_password[] = $characterOptions[$number];
+    }
+    return implode($rand_password); //turn the array into a string
+}
+
+##function that encrypts the password that we randomly generated
+
+function createEncryptedPassword($password){
+    //the has of the password that can be stored in a database
+    return password_hash($password, PASSWORD_DEFAULT);  
+}
+
+##create function to send email - requires username, password and email
+function sendRegistrationEmail($username, $password, $email){
+     ##setup email subject, message of the email and link in the login 
+    $admin_url = $_SERVER['HTTP_HOST'].'/wells_s_3014_r2/admin/admin_login.php';
+    $email_subject = 'New User Credentials for '. $username;
+    $email_message = sprintf('Username: %s, Password: %s, Login Here: %s', $username, $password, $admin_url);
+    ##set headers on the email
+    $email_headers = array(
+        'From' =>'donotreply@moviescms.com',
+        'Reply-To'=> $email
+    );
+
+   return mail($email,$email_subject,$email_message,$email_headers);  
+
 }
 
 function getSingleUser($id)
@@ -106,33 +158,46 @@ function deleteUser($user_id){
 
 function editUser($user_data)
 {
-    if (empty($user_data['username']) || isUsernameExists($user_data['username'])) {
-        return 'Username is invalid!!';
+    // if(empty($user_data['username']) || isUsernameExists($user_data['username'])){
+    //     return 'Username is Invalid or Already Exists';
+    // }
+
+    $pdo = Database::getInstance()->getConnection(); 
+
+
+     ##Store the new password
+    $updated_password = $user_data["password"];
+    
+    ##ENCRYPT THE UPDATED PASSWORD HERE
+    $encrypted_password_update = createEncryptedPassword($updated_password);
+    // Boolean to check we have a blank password
+    $is_new_password = $updated_password !== '';
+
+    $password_sql_snippet = $is_new_password ? ', user_pass=:password ' : '';
+    $update_user_query = 
+        'UPDATE tbl_user SET user_fname=:fname, user_name=:username, user_email=:email, user_level=:user_level '. $password_sql_snippet .'WHERE user_id = :id';
+    // var_dump($update_user_query); die;
+    $update_user_set = $pdo->prepare($update_user_query);
+    $placeholders = array(
+        ":fname"    =>$user_data["fname"],
+        ":username" =>$user_data["username"],
+        ":email"    =>$user_data["email"],
+        ":user_level"=>$user_data["user_level"],
+        ":id"=>$user_data["id"]
+    );
+
+    if($is_new_password) {
+        $placeholders[":password"] = $encrypted_password_update;
     }
 
-    $pdo = Database::getInstance()->getConnection();
+    $update_user_result = $update_user_set->execute($placeholders);
 
-    ## TODO: finish the following lines, so that your user profile is updated
-    $update_user_query  = 'UPDATE tbl_user SET user_fname = :fname, user_name=:username, user_pass=:password, user_email=:email, user_level=:level WHERE user_id=:id';
-    $update_user_set    = $pdo->prepare($update_user_query);
-    $update_user_result = $update_user_set->execute(
-        array(
-            ':fname'    => $user_data['fname'],
-            ':username' => $user_data['username'],
-            ':password' => $user_data['password'],
-            ':email'    => $user_data['email'],
-            ':level'    => $user_data['user_level'],
-            ':id'       => $user_data['id'],
-        )
-    );
-    // $update_user_set->debugDumpParams();
-    // exit;
-
-    if ($update_user_result) {
+    if($update_user_result){
+        $_SESSION['user_name'] = $user_data['fname'];
         $_SESSION['user_level'] = $user_data['user_level'];
         redirect_to('index.php');
-    } else {
-        return 'Guess you got canned....';
+    }else{
+        return 'Update did not go through.';
     }
 }
 
