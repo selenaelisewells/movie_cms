@@ -29,20 +29,20 @@ function getSingleMovie($id)
     }
 }
 
-function getMoviesByGenre($genre)
-{
+function getMoviesbyGenre($genre) {
     $pdo = Database::getInstance()->getConnection();
-    ## TODO: finish the following SQL query that fetch all movies that belongs to the given genre
-    $query = 'SELECT m.*, GROUP_CONCAT(g.genre_name) as genre_name FROM tbl_movies m';
-    $query .= ' LEFT JOIN tbl_mov_genre link ON link.movies_id = m.movies_id';
-    $query .= ' LEFT JOIN tbl_genre g ON link.genre_id = g.genre_id';
-    $query .= ' GROUP BY m.movies_id';
-    $query .= ' HAVING genre_name LIKE "%' . $genre . '%"';
+    // $query = 'SELECT * FROM `tbl_movies` LEFT JOIN tbl_mov_genre ON tbl_movies.movies_id = tbl_mov_genre.movies_id LEFT JOIN tbl_genre ON tbl_mov_genre.genre_id = tbl_genre.genre_id WHERE genre_name = "'.$genre.'"'; -- this query I wrote
+
+    $query = 'SELECT m.*, GROUP_CONCAT(g.genre_name) AS genre_name FROM tbl_movies m';
+    $query.= ' LEFT JOIN tbl_mov_genre link ON link.movies_id = m.movies_id'; 
+    $query.= ' LEFT JOIN tbl_genre g ON link.genre_id = g.genre_id';
+    $query.= ' GROUP BY m.movies_id HAVING genre_name LIKE "%'.$genre.'%"';
+
     $runQuery = $pdo->query($query);
-    if ($runQuery) {
+    if ($runQuery){
         $movies = $runQuery->fetchAll(PDO::FETCH_ASSOC);
         return $movies;
-    } else {
-        return 'There was a problem to fetch movie by genre ' . $genre;
+    } else{
+        return 'There was a problem fetching by the genre'.$genre;
     }
 }
