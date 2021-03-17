@@ -30,6 +30,9 @@ if (isset($_POST['submit'])) {
 
 <body>
     <?php echo !empty($message) ? $message : ''; ?>
+    <?php if($error_message = $_GET['error_message']): ?>
+        <h2 class="error_message"><?php echo $error_message; ?></h2>
+    <?php endif; ?>
     <form action="admin_login.php" method="post">
         <label for="username">Username:</label>
         <input id="username" type="text" name="username" value="">

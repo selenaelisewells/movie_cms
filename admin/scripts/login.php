@@ -23,6 +23,17 @@ function login($username, $password, $ip)
     $verify = password_verify($password, $found_user['user_pass']);
   
     if ($found_user && $verify) {
+
+        
+        
+        $expired = //???? define this
+        
+        //check if it is new user && the expiration date hasnt expired
+        if($found_user['login_num'] <= 0 && $expired){
+            redirect_to("admin_login.php?error_message=Your Account Is Expired");
+        }
+
+
         //we found the user in the DB, get them in!
         $found_user_id = $found_user['user_id'];
 
@@ -34,37 +45,21 @@ function login($username, $password, $ip)
         //write the last session date and time
         $_SESSION['last_login'] = $found_user['user_date'];
         //update the session date and time to current data and time
-        $update_time_query = 'UPDATE tbl_user SET user_date = NOW() WHERE user_id=:user_id';
+        $update_time_query = 'UPDATE tbl_user SET user_date = NOW(), user_ip = :user_ip, login_num = login_num+1 WHERE user_id=:user_id';
         $update_time_set = $pdo->prepare($update_time_query);
         $update_time_set->execute(
             array(
-                
-                ':user_id'=>$found_user_id 
-            )
-            );
-    
-        //update the user ip
-
-        $update_user_query = 'UPDATE tbl_user SET user_ip = :user_ip WHERE user_id=:user_id';
-        $update_user_set = $pdo->prepare($update_user_query);
-        $update_user_set->execute(
-            array(
                 ':user_ip'=>$ip,
-                ':user_id'=>$found_user_id
+                ':user_id'=>$found_user_id 
             )
         );
-      
-        //update the successful logins - grab the table and add one to the database table
-        $update_successful_logs_query = 'UPDATE tbl_user SET login_num = login_num+1 WHERE user_id=:user_id';
-        $update_successful_logs_set = $pdo->prepare($update_successful_logs_query);
-        $update_successful_logs_set->execute(
-            array(
-                ':user_id'=>$found_user_id 
-            )
-            );
+    
         //write the login number so it can be set on the page
         $_SESSION['login_num'] = $found_user['login_num'];
         //redirect user back to index.php
+        if($found_user['login_num'] <= 0){
+            redirect_to('admin_edituser.php');
+        }
         redirect_to('index.php');
 
     } else {
